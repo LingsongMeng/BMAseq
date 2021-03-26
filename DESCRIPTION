@@ -7,8 +7,7 @@ Authors@R:
            role = c("aut", "cre"),
            email = "lingsongmeng@ufl.edu")
 Description: A Bayesian Model Averaging Approach for High-throughput RNA-seq Count Data (BMAseq) and Its Applications.
-Depends: R(>= 2.10.1)
-Imports: limma, BHH2, stats
+Depends: limma, BHH2, stats, R(>= 2.10.1)
 License: GPL-2
 NeedsCompilation: no
 Encoding: UTF-8
