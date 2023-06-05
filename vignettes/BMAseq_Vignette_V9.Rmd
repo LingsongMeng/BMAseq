@@ -1,0 +1,771 @@
+---
+title: "Getting Started with BMAseq"
+author: "Lingsong Meng"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::robobook:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+vignette: >
+  %\VignetteIndexEntry{Introduction to Package BMAseq}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+# Add argument Laplace = T/F
+# Index list for additional pattern 
+
+```
+
+
+
+
+
+## Introduction
+
+BMAseq offers many variants on DE gene analysis using RNA-seq data. In this document, we present multiple BMAseq analysis, including univariate analysis, multivariate analysis without interaction, multivariate analysis with interactions, additional analysis with specific model space settings.
+
+We use a sample data to introduce the BMAseq package. The data consists of a phenotype data including 50 subjects and 6 variables, and a RNAseq counts data inlcuding 1000 genes for 50 subjects. The phenotype data and the gene expression data are matched by subjects.
+
+```{r}
+# package 
+library(BMAseq)
+
+# read sample data
+dat.pheno <- dget("/Users/fred/Table/BayesResearch/sample_dat_pheno")
+dat.expr <- dget("/Users/fred/Table/BayesResearch/sample_dat_expr")
+
+dat.pheno[1:5,]
+dat.expr[1:5,1:5]
+```
+
+
+
+## Univariable Analysis
+
+We can do univariate BMAseq analysis for variable selection or screening using `BMAseq.uni` function. We need to input:
+
+- `dat.expr.counts` RNA-seq count data matrix (rows for genes and columns for subjects); 
+- `dat.pheno` phenotypic data matrix (rows for subjects and columns for variables); 
+- `var.pool` variables of interest, a vector; 
+- `cut.BF` Bayes factor criterion, default value is 1; 
+- `cut.FDR` false discovery rate criterion for identifying DE genes, default value is 0.25.
+
+For each variable, `BMAseq.uni` creates a model space including only two models: a null model and a univariate model. Since we consider 6 variables in this case, 6 model model spaces will be printed to show the running process of the program.
+
+```{r}
+vars <- c("BMI", "SEX", "MHHTN", "MHT2D", "MHCVD", "MHHRTATT") 
+
+output.uni <- BMAseq.uni(dat.expr.counts = dat.expr, 
+                         dat.pheno = dat.pheno, 
+                         var.pool = vars, 
+                         cut.BF = 1, 
+                         cut.FDR = 0.5)
+
+```
+
+The `output.uni` is a list of the following:
+
+- `dat.expr.logcpm` normalized RNA-seq data matrix (rows for genes and columns for subjects);
+
+```{r}
+dim(output.uni$dat.expr.logcpm)
+output.uni$dat.expr.logcpm[1:5,1:5]
+```
+
+
+- `weights` estimated voom weights;
+
+```{r}
+dim(output.uni$weights)
+output.uni$weights[1:5,1:5]
+```
+
+
+- `eFDR` estimated false discovery rate matrix (rows for genes and columns for variables of interest);
+
+```{r}
+dim(output.uni$eFDR)
+output.uni$eFDR[1:5,1:5]
+```
+
+
+- `nDEG` the number of DE genes associated with each variable of interest;
+
+```{r}
+output.uni$nDEG
+```
+
+- `DEG` DE genes associated with each variable of interest.
+
+```{r}
+output.uni$DEG$BMI[1:5,]
+output.uni$DEG$SEX[1:5,]
+output.uni$DEG$MHHTN
+output.uni$DEG$MHT2D[1:5,]
+output.uni$DEG$MHCVD[1:5,]
+output.uni$DEG$MHHRTATT
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Multivariable Analysis without Interaction
+
+Assuming we only consider 4 variables BMI, SEX, MHHTN, and MHT2D in multivariate BMAseq analysis and we do not take interaction effect into consideration, there are two approaches to do the multivariate analysis using BMAseq.
+
+
+### One-step approach
+
+One-step approach: run `BMAseq.multi` function directly. 
+
+We need to input: 
+
+- `dat.expr.counts` RNA-seq count data matrix (rows for genes and columns for subjects); 
+- `dat.pheno` phenotypic data matrix (rows for subjects and columns for variables); 
+- `var.pool` variables of interest, a vector; 
+- `max.nvar` The maximum number of variables in a model; 
+- `interaction` specific interaction terms with input format 'A&B', default is Null; 
+- `cut.BF` Bayes factor criterion, default value is 1; 
+- `cut.FDR` false discovery rate criterion for identifying DE genes, default value is 0.05.
+
+When the following code runs, each model in the model space will be built and printed. Since we consider 4 variables, the default model space consists of total 16 models. 
+
+```{r}
+var.pool <- c("BMI", "SEX", "MHHTN", "MHT2D") 
+
+output.multi <- BMAseq.multi(dat.expr.counts = dat.expr, 
+                             dat.pheno = dat.pheno, 
+                             var.pool = var.pool, 
+                             max.nvar = 4, 
+                             interaction = NULL, 
+                             cut.BF = 1, 
+                             cut.FDR = 0.05)
+```
+
+
+
+The `output.multi` is a list consisting of the following:
+
+- `dat.expr.logcpm` normalized RNA-seq data matrix (rows for genes and columns for subjects);
+
+```{r}
+dim(output.multi$dat.expr.logcpm)
+output.multi$dat.expr.logcpm[1:5, 1:5]
+```
+
+
+- `weights` estimated voom weights;
+
+```{r}
+dim(output.multi$weights)
+output.multi$weights[1:5,1:5]
+```
+
+
+- `dat.pheno.new` phenotypic data matrix including new interaction variables, will be same as input dat.pheno if interaction is NULL;
+
+```{r}
+dim(output.multi$dat.pheno.new)
+output.multi$dat.pheno.new[1:5,]
+```
+
+
+- `model.space` model space including all possible models;
+
+```{r}
+length(output.multi$model.space)
+output.multi$model.space
+```
+
+
+- `post.modelprob` posterior model probability for each gene;
+
+```{r}
+dim(output.multi$post.modelprob)
+output.multi$post.modelprob[1:5, 1:5]
+```
+
+
+- `post.incl.modelprob` posterior inclusive model probability for each gene associated with main effect of each variables if interaction is NULL; with main, interaction, main or interaction effects if interaction not NULL;
+
+```{r}
+dim(output.multi$post.incl.modelprob)
+output.multi$post.incl.modelprob[1:5,]
+```
+
+
+- `post.incl.modelprob.JointMain` posterior inclusive model probability for each gene associated with joint main effects of variables, will be output if interaction is NULL.
+
+```{r}
+dim(output.multi$post.incl.modelprob.JointMain)
+output.multi$post.incl.modelprob.JointMain[1:5,]
+```
+
+
+- `index.incl` indices of the inclusive models;
+
+```{r}
+output.multi$index.incl
+```
+
+
+- `eFDR` estimated FDR for each gene associated with main effect of each variables if interaction is NULL; with main, interaction, main or interaction effects if interaction is not NULL.
+
+```{r}
+dim(output.multi$eFDR)
+output.multi$eFDR[1:5,]
+```
+
+
+- `eFDR.JointMain` Estimated FDR for each gene associated with all possible joint effect of variables, will be output if interaction is NULL.
+
+```{r}
+dim(output.multi$eFDR.JointMain)
+output.multi$eFDR.JointMain[1:5,]
+```
+
+
+- `summary.nDEG` a summary table of the number of identified DE gene associated with main effect of each variable if interaction is NULL; with main, interaction, main or interaction effects if interaction is not NULL;
+
+```{r}
+output.multi$summary.nDEG
+```
+
+
+- `summary.nDEG.JointMain` a summary table of the number of identified DE gene associated with joint main effcts of variables, will be output if interaction is NULL;
+
+```{r}
+output.multi$summary.nDEG.JointMain
+```
+
+
+- `DEG.bestmodel` DE genes associated with main effect of each variable if interaction is NULL; with main, interaction, main or interaction effects of each variable if interaction is not NULL; and the best model used to identify each DE gene.
+
+```{r}
+output.multi$DEG.bestmodel
+```
+
+
+
+
+
+
+Our package also provides a Laplace approximation to calculate Bayes Factor as a backup. We also need to input: 
+
+- `laplace` Use Laplace approximation to calculate Bayes Factor, default is FALSE.
+
+```{r}
+output.multi.laplace <- BMAseq.multi(dat.expr.counts = dat.expr, 
+                                     dat.pheno = dat.pheno, 
+                                     var.pool = var.pool, 
+                                     max.nvar = 4, 
+                                     interaction = NULL, 
+                                     cut.BF = 1, 
+                                     cut.FDR = 0.05,
+                                     laplace = TRUE)
+```
+
+
+
+
+The `output.multi.laplace` is a list consisting of the following:
+
+- `dat.expr.logcpm` normalized RNA-seq data matrix (rows for genes and columns for subjects);
+
+```{r}
+dim(output.multi.laplace$dat.expr.logcpm)
+output.multi.laplace$dat.expr.logcpm[1:5, 1:5]
+```
+
+
+- `weights` estimated voom weights;
+
+```{r}
+dim(output.multi.laplace$weights)
+output.multi.laplace$weights[1:5,1:5]
+```
+
+
+- `dat.pheno.new` phenotypic data matrix including new interaction variables, will be same as input dat.pheno if interaction is NULL;
+
+```{r}
+dim(output.multi.laplace$dat.pheno.new)
+output.multi.laplace$dat.pheno.new[1:5,]
+```
+
+
+- `model.space` model space including all possible models;
+
+```{r}
+length(output.multi.laplace$model.space)
+output.multi.laplace$model.space
+```
+
+
+- `post.modelprob` posterior model probability for each gene;
+
+```{r}
+dim(output.multi.laplace$post.modelprob)
+output.multi.laplace$post.modelprob[1:5, 1:5]
+```
+
+
+- `post.incl.modelprob` posterior inclusive model probability for each gene associated with main effect of each variables if interaction is NULL; with main, interaction, main or interaction effects if interaction not NULL;
+
+```{r}
+dim(output.multi.laplace$post.incl.modelprob)
+output.multi.laplace$post.incl.modelprob[1:5,]
+```
+
+
+- `post.incl.modelprob.JointMain` posterior inclusive model probability for each gene associated with joint main effects of variables, will be output if interaction is NULL.
+
+```{r}
+dim(output.multi.laplace$post.incl.modelprob.JointMain)
+output.multi.laplace$post.incl.modelprob.JointMain[1:5,]
+```
+
+
+- `index.incl` indices of the inclusive models;
+
+```{r}
+output.multi.laplace$index.incl
+```
+
+
+- `eFDR` estimated FDR for each gene associated with main effect of each variables if interaction is NULL; with main, interaction, main or interaction effects if interaction is not NULL.
+
+```{r}
+dim(output.multi.laplace$eFDR)
+output.multi.laplace$eFDR[1:5,]
+```
+
+
+- `eFDR.JointMain` Estimated FDR for each gene associated with all possible joint effect of variables, will be output if interaction is NULL.
+
+```{r}
+dim(output.multi.laplace$eFDR.JointMain)
+output.multi.laplace$eFDR.JointMain[1:5,]
+```
+
+
+- `summary.nDEG` a summary table of the number of identified DE gene associated with main effect of each variable if interaction is NULL; with main, interaction, main or interaction effects if interaction is not NULL;
+
+```{r}
+output.multi.laplace$summary.nDEG
+```
+
+
+- `summary.nDEG.JointMain` a summary table of the number of identified DE gene associated with joint main effcts of variables, will be output if interaction is NULL;
+
+```{r}
+output.multi.laplace$summary.nDEG.JointMain
+```
+
+
+- `DEG.bestmodel` DE genes associated with main effect of each variable if interaction is NULL; with main, interaction, main or interaction effects of each variable if interaction is not NULL; and the best model used to identify each DE gene.
+
+```{r}
+output.multi.laplace$DEG.bestmodel
+```
+
+
+
+
+
+
+
+
+
+
+
+### Two-step approach
+
+Two-step approach: run `BMAseq.multi.postprob` function to obtain `post.modelprob` first, then run `BMAseq.multi.DEG` function to obtain analysis results. We recommend to use the two-step approach since it is flexibility and offers more information. 
+
+For `BMAseq.multi.postprob`, we need to input:
+
+- `dat.expr.counts` RNA-seq count data matrix (rows for genes and columns for subjects); 
+- `dat.pheno` phenotypic data matrix (rows for subjects and columns for variables); 
+- `var.pool` variables of interest, a vector; 
+- `max.nvar` The maximum number of variables in a model; 
+- `interaction` specific interaction terms with input format 'A&B', default is Null; 
+- `cut.BF` Bayes factor criterion, default value is 1.
+
+For `BMAseq.multi.DEG`, we need to input:
+
+- `postprob.output` The output from BMAseq.multi.postprob function, a list; 
+- `cut.FDR` false discovery rate criterion for identifying DE genes, default value is 0.05.
+
+```{r}
+var.pool <- c("BMI", "SEX", "MHHTN", "MHT2D") 
+
+output.multi1 <- BMAseq.multi.postprob(dat.expr.counts = dat.expr, 
+                                       dat.pheno = dat.pheno, 
+                                       var.pool = var.pool,
+                                       max.nvar = 4, 
+                                       interaction = NULL, 
+                                       cut.BF = 1)
+
+output.multi2 <- BMAseq.multi.DEG(postprob.output = output.multi1,
+                                  cut.FDR = 0.05)
+
+```
+
+
+The `output.multi1` is a list consisting of the following:
+
+- `dat.expr.logcpm` normalized RNA-seq data matrix (rows for genes and columns for subjects);
+
+```{r}
+dim(output.multi1$dat.expr.logcpm)
+output.multi1$dat.expr.logcpm[1:5, 1:5]
+```
+
+
+- `weights` estimated voom weights;
+
+```{r}
+dim(output.multi1$weights)
+output.multi1$weights[1:5, 1:5]
+
+## row and col names
+```
+
+
+- `dat.pheno.new` phenotypic data matrix including new interaction variables, will be same as input dat.pheno if interaction=NULL;
+
+```{r}
+dim(output.multi1$dat.pheno.new)
+output.multi1$dat.pheno.new[1:5,]
+```
+
+
+- `model.space` model space including all possible models;
+
+```{r}
+length(output.multi1$model.space)
+output.multi1$model.space
+```
+
+
+- `post.modelprob` posterior model probability for each gene.
+
+```{r}
+dim(output.multi1$post.modelprob)
+output.multi1$post.modelprob[1:5,1:5]
+```
+
+
+The `output.multi2` is a list consisting of the following:
+
+- `post.incl.modelprob` posterior inclusive model probability for each gene associated with main effect of each variables;
+
+```{r}
+dim(output.multi2$post.incl.modelprob)
+output.multi2$post.incl.modelprob[1:5,]
+```
+
+
+- `post.incl.modelprob.JointMain` posterior inclusive model probability for joint main effects of variables;
+
+```{r}
+dim(output.multi2$post.incl.modelprob.JointMain)
+output.multi2$post.incl.modelprob.JointMain[1:5,]
+```
+
+
+- `index.incl` indices of the inclusive models;
+
+```{r}
+output.multi2$index.incl
+```
+
+
+- `eFDR` estimated FDR for each gene associated with main effect of each variables;
+
+```{r}
+dim(output.multi2$eFDR)
+output.multi2$eFDR[1:5,]
+```
+
+
+- `eFDR.JointMain` estimated FDR for each gene associated with joint main effects of variables;
+
+```{r}
+dim(output.multi2$eFDR.JointMain)
+output.multi2$eFDR.JointMain[1:5,]
+```
+
+
+- `summary.nDEG` a summary table of the number of identified DE gene associated with each variable;
+
+```{r}
+output.multi2$summary.nDEG
+```
+
+
+- `summary.nDEG.JointMain` a summary table of the number of identified DE gene associated with joint main effcts of variables;
+
+```{r}
+output.multi2$summary.nDEG.JointMain
+```
+
+
+- `DEG.bestmodel` DE genes associated with main effect of each variables and the best model used to identify each DE gene;
+
+```{r}
+output.multi2$DEG.bestmodel
+```
+
+
+
+
+We can use `get.jointMain` function to get output for sepecific joint main effects. 
+
+```{r}
+output.JointMain.spec <- get.jointMain(output.multi1, 
+                                       joint = c("BMI.SEX", "BMI.SEX.MHHTN"), 
+                                       cut.FDR = 0.05)
+```
+
+
+The `output.JointMain.spec` is a list consisting of the following:
+
+- `post.incl.modelprob.JointMain` posterior inclusive model probability for specific joint effect of variables;
+
+```{r}
+output.JointMain.spec$post.incl.modelprob.JointMain[1:5,]
+```
+
+
+- `ind.incl.JointMain` indices of the inclusive models for specific joint effcts of variables;
+
+```{r}
+output.JointMain.spec$ind.incl.JointMain
+```
+
+
+- `eFDR.JointMain` estimated FDR for specific joint effect;
+
+```{r}
+output.JointMain.spec$eFDR.JointMain[1:5,]
+```
+
+
+- `summary.nDEG.JointMain` a summary table of the number of identified DE gene for specific joint effcts of variables.
+
+```{r}
+output.JointMain.spec$summary.nDEG.JointMain
+```
+
+
+
+
+
+
+
+
+
+
+## Multivariable Analysis with Interaction
+
+Assuming we consider 4 variables BMI, SEX, MHHTN, and MHT2D in multivariate BMAseq analysis and we also take BMI vs SEX interaction effect into consideration, we present the two-step approach to achieve the multivariate analysis using BMAseq. In this case, we will show the flexibility of BMAseq using the two-step approach.
+
+The first step is to calculate posterior model probability for each model and each gene. Note that `interaction` are specific input interaction terms which must has the format `A&B`, e.g. "BMI&SEX". In `output.multi.int1`, the output `model.space` is a default model space including total 27 models where all patterns between BMI and SEX are considered.
+
+### First Step V1
+
+```{r}
+var.pool <- c("BMI", "SEX", "MHHTN", "MHT2D") 
+
+interaction <- "BMI&SEX"  
+
+output.multi.int1 <- BMAseq.multi.postprob(dat.expr.counts = dat.expr, 
+                                           dat.pheno = dat.pheno, 
+                                           var.pool = var.pool, 
+                                           max.nvar = 4, 
+                                           interaction = interaction, 
+                                           cut.BF = 1)
+```
+
+
+For the first step, we can build a default model sapce using `Modelspace` function and calculate posterior model probability using `BMAseq.multi.postprob.MSout` function.
+
+### First Step V2  
+
+```{r}
+MS_default <- Modelspace(dat.pheno = dat.pheno, 
+                         var.pool = var.pool, 
+                         max.nvar = 4, 
+                         interaction = interaction)
+
+output.multi.int1 <- BMAseq.multi.postprob.MSout(dat.expr.counts = dat.expr, 
+                                                 dat.pheno = MS_default$dat.pheno.new,
+                                                 model.space = MS_default$model.space, 
+                                                 var.pool = MS_default$var.pool,
+                                                 interaction = MS_default$interaction,
+                                                 cut.BF = 1)
+```
+
+
+
+
+The second step is to obtain the BMAseq analysis results.
+
+### Second Step V1
+
+```{r}
+output.multi.int2 <- BMAseq.multi.DEG(postprob.output = output.multi.int1, 
+                                      cut.FDR = 0.05)
+```
+
+
+In this case, the `output.multi.int2` is a list consisting of the following:
+
+- `post.incl.modelprob` posterior inclusive model probability for each gene associated with main, interaction, main or interaction effect of each variables;
+
+```{r}
+dim(output.multi.int2$post.incl.modelprob)
+output.multi.int2$post.incl.modelprob[1:5,]
+```
+
+
+- `eFDR` estimated FDR for each gene associated with main, interaction, main or interaction effect of each variables;
+
+```{r}
+dim(output.multi.int2$eFDR)
+output.multi.int2$eFDR[1:5,]
+```
+
+
+`summary.nDEG` a summary table of the number of identified DE gene associated with each variable;
+
+```{r}
+output.multi.int2$summary.nDEG
+```
+
+
+- `DEG.bestmodel` DE genes associated with main, interaction, main or interaction effect of each variables and the best model used to identify each DE gene;
+
+```{r}
+output.multi.int2$DEG.bestmodel
+```
+
+
+
+
+
+
+
+
+
+
+Sometimes, we want to identify DE genes associated with additional specific inclusive models. For example, we want to identify DE genes associated with 1. BMI (all the models containing BMI but no BMI related interaction terms), 2. SEX (all the models containing SEX but no SEX related interaction terms), 3. BMIlow.SEXfemale (all the models with this interaction term but not BMI or SEX as main effects), 4. BMIlow.SEXmale (all the models with this interaction term but not BMI or SEX as main effects), etc.    
+
+To achieve these goals, in the second step, we can specify the argument `ind.incl.add` when using `BMAseq.multi.DEG` function. The `ind.incl.add` is a list of indices of additional included model in the model space. In the following example, we identify DE genes associated with additional specific inclusive models as a representation of other 15 patterns.
+
+### Second Step V2
+
+```{r}
+# 1. BMI (all the models containing BMI but no BMI related interaction terms)
+id1 <- c(2, 4, 18, 20, 34, 36, 50, 52)
+# 2. SEX (all the models containing SEX but no SEX related interaction terms)
+id2 <- c(3, 4, 19, 20, 35, 36, 51, 52)
+# 3. BMIlow.SEXfemale (all the models with this interaction term but not BMI or SEX as main effects)
+id3 <- c(5, 21, 37, 53)
+# 4. BMIlow.SEXmale (all the models with this interaction term but not BMI or SEX as main effects)
+id4 <- c(6, 22, 38, 54)
+# 5. BMIhigh.SEXfemale (all the models with this interaction term but not BMI or SEX as main effects)
+id5 <- c(7, 14, 23, 30, 39, 46, 55, 62)
+# 6. BMIhigh.SEXmale (all the models with this interaction term but not BMI or SEX as main effects)
+id6 <- c(8, 15, 24, 31, 40, 47, 56, 63)
+# 7. BMIlow.SEXfemale.BMIhigh.SEXmale (all the models with this interaction term but not BMI or SEX as main effects)
+id7 <- c(9, 14, 15, 25, 30, 31, 41, 46, 47, 57, 62, 63)
+# 8. BMI + BMIlow.SEXmale
+id8 <- c(10, 26, 42, 58)
+# 9. BMI + BMIhigh.SEXmale
+id9 <- c(12, 28, 44, 60)
+# 10. SEX + BMIhigh.SEXfemale
+id10 <- c(11, 27, 43, 59)
+# 11. SEX + BMIhigh.SEXmale
+id11 <- c(13, 29, 45, 61)
+# 12. BMIlow.SEXfemale.BMIhigh.SEXmale + BMIhigh.SEXfemale
+id12 <- c(14, 30, 46, 62)
+# 13. BMIlow.SEXfemale.BMIhigh.SEXmale + BMIhigh.SEXmale
+id13 <- c(15, 31, 47, 63)
+# 14. BMI + SEX
+id14 <- c(4, 20, 36, 52)
+# 15. BMI + SEX + BMIhigh.SEXmale
+id15 <- c(16, 32, 48, 64)
+
+id.add.list <- list(id1, id2, id3, id4, id5, id6, id7, id8, id9, id10, id11, id12, id13, id14, id15)
+name <- c("BMI.Main.noInt", "SEX.Main.noInt", "BMIlowSEXfemale.noMain", "BMIlowSEXmale.noMain",  "BMIhighSEXfemale.noMain", "BMIhighSEXmale.noMain", "BMIlowSEXfemaleBMIhighSEXmale.noMain", "BMI.plus.BMIlowSEXmale", "BMI.plus.BMIhighSEXmale", "SEX.plus.BMIhighSEXfemale", "SEX.plus.BMIhighSEXmale", "BMIlowSEXfemaleBMIhighSEXmale.plus.BMIhighSEXfemale", "BMIlowSEXfemaleBMIhighSEXmale.plus.BMIhighSEXmale", "BMI.plus.SEX", "BMI.plus.SEX.plus.BMIhighSEXmale")
+names(id.add.list) <- name
+
+
+output.multi.int2.add <- BMAseq.multi.DEG(postprob.output = output.multi.int1,
+                                          ind.incl.add = id.add.list, 
+                                          cut.FDR = 0.05)
+
+
+
+```
+
+
+
+Let's first look at what `output.multi.int2.add` looks like:
+
+```{r}
+id.add.list
+```
+
+
+
+
+The `output.multi.int2.add` includes all the analysis results from 'output.multi.int2'. Furthermore, it also includes the following results:
+
+
+- `post.incl.modelprob.add` posterior inclusive model probability for each gene associated with additional inclusive models, will be output if ind.incl.add != Null;
+
+```{r}
+dim(output.multi.int2.add$post.incl.modelprob.Add)
+output.multi.int2.add$post.incl.modelprob.Add[1:5,]
+```
+
+
+- `eFDR.add` estimated FDR for each gene associated with additional inclusive models, will be output if ind.incl.add != Null;
+
+```{r}
+dim(output.multi.int2.add$eFDR.Add)
+output.multi.int2.add$eFDR.Add[1:5,]
+```
+
+
+- `summary.nDEG.add` A summary table of the number of identified DE gene associated with additional inclusive models, will be output if ind.incl.add != Null.
+
+```{r}
+output.multi.int2.add$summary.nDEG.Add
+```
+
