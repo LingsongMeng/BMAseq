@@ -4,7 +4,7 @@ BMAseq is an R package for dealing with differential gene expression analysis in
 
 ## Introduction
 
-BMAseq package was developed based on a Bayesian Model Averaging model, which offers many variants on differential gene expression analysis using RNA-seq data. Here, we present multiple analytical scenariors for BMAseq, including univariate analysis, multivariate analysis without interaction, multivariate analysis with interactions, and additional analysis with specific model space settings. More details can be found un the [vignette file](https://github.com/LingsongMeng/BMAseq/blob/master/vignettes/BMAseq_Vignette_V9.Rmd).
+BMAseq package was developed based on a Bayesian Model Averaging model, which offers many variants on differential gene expression analysis using RNA-seq data. Here, we present multiple analytical scenariors for BMAseq, including univariate analysis, multivariate analysis without interaction, multivariate analysis with interactions, and additional analysis with specific model space settings. More details can be found in the [vignette file](https://github.com/LingsongMeng/BMAseq/blob/master/vignettes/BMAseq_Vignette_V9.Rmd).
 
 ## Installation
 
