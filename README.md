@@ -71,7 +71,7 @@ output.multi$DEG.bestmodel
 ```
 
 
-### Multivariate Analysis with Interaction
+### Multivariate analysis with interaction
 ```r
 # perform multivariate analysis with interaction
 var.pool <- c("BMI", "SEX", "MHHTN", "MHT2D") 
@@ -96,7 +96,7 @@ output.multi.int2$DEG.bestmodel
 ```
 
 ## Advanced Usage
-### Additional Analysis with Specific Model Space Settings
+### Additional analysis with specific model space settings
 ```r
 # build a model sapce and calculate posterior model probability
 MS_default <- Modelspace(dat.pheno = dat.pheno, 
@@ -156,7 +156,7 @@ output.multi.int2.add <- BMAseq.multi.DEG(postprob.output = output.multi.int1,
 summary.nDEG.add
 ```
 
-# Getting help
+# Getting Help
 
 If you have any inquiries regarding our BMAseq, don't hesitate to reach out to us at lingsongmeng2019@gmail.com and anni.liu.001@gmail.com.
 
